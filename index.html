@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestor de Fichas de Treino</title>
+  <style>
+    /* Reset básico e Cores */
+    :root {
+      --color-yellow: #FFDE00;     /* Amarelo */
+      --color-blue: #007BFF;       /* Azul */
+      --color-black: #1a1a1a;      /* Preto (destaque) */
+      --color-dark-gray: #333333;  /* Cinza escuro para texto sobre fundos */
+      --color-medium-gray: #6c757d;/* Cinza médio */
+      --color-light-gray: #f0f0f0; /* Cinza claro para fundos de cards/seções */
+      --color-white: #ffffff;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background-color: var(--color-dark-gray);
+      color: var(--color-white);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding-top: 20px;
+      padding-bottom: 20px;
+    }
+    #app-container {
+      width: 90%;
+      max-width: 1000px;
+      background-color: var(--color-black);
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+    }
+    /* Efeito de Fundo com Névoa */
+    #app-container::before {
+      content: "";
+      position: absolute;
+      top:0; left:0; right:0; bottom:0;
+      background: linear-gradient(135deg, rgba(20,30,40,0.8) 0%, rgba(30,40,50,0.9)100%);
+      opacity: 0.5;
+      filter: blur(1px);
+      z-index: -1;
+    }
+    .view {
+      display: none;
+      padding: 20px;
+      min-height: 80vh;
+    }
+    .view.active-view { display: block; }
+
+    /* Tela de Login */
+    .login-box {
+      background-color: rgba(30,30,30,0.9);
+      padding: 30px;
+      border-radius: 8px;
+      max-width: 400px;
+      margin: 100px auto;
+      text-align: center;
+      box-shadow: 0 0 15px var(--color-yellow);
+    }
+    .login-box h2 {
+      color: var(--color-yellow);
+      margin-bottom: 20px;
+    }
+    .login-box input[type="password"] {
+      width: calc(100% - 22px);
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid var(--color-medium-gray);
+      border-radius: 4px;
+      background-color: var(--color-light-gray);
+      color: var(--color-black);
+    }
+    .login-box button {
+      background-color: var(--color-yellow);
+      color: var(--color-black);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    .login-box button:hover {
+      background-color: #ffd000;
+    }
+    .error-message {
+      color: #ff4d4d;
+      font-size: 0.9em;
+      margin-top: 10px;
+      min-height: 1em;
+    }
+
+    /* Painel Admin */
+    #admin-view header {
+      background-color: var(--color-black);
+      padding: 15px 20px;
+      border-bottom: 3px solid var(--color-yellow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: -20px -20px 20px -20px;
+      flex-wrap: wrap;
+    }
+    #admin-view header h1 {
+      margin: 0;
+      color: var(--color-yellow);
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+    #admin-view nav {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    #admin-view nav button {
+      background-color: var(--color-blue);
+      color: var(--color-white);
+      border: none;
+      padding: 8px 15px;
+      margin-left: 10px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #admin-view nav button:first-child {
+      margin-left: 0;
+    }
+    #admin-view nav button:hover,
+    #admin-view nav button.active-nav {
+      background-color: #0056b3;
+    }
+    #logout-button {
+      background-color: var(--color-medium-gray) !important;
+    }
+    #logout-button:hover {
+      background-color: var(--color-dark-gray) !important;
+    }
+
+    /* Seções do Admin */
+    .admin-section {
+      display: none;
+      background-color: rgba(40,40,40,0.85);
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .admin-section.active-section { display: block; }
+    .admin-section h2 {
+      color: var(--color-yellow);
+      border-bottom: 1px solid var(--color-medium-gray);
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    .admin-section label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: var(--color-light-gray);
+    }
+    .admin-section input[type="text"],
+    .admin-section input[type="password"],
+    .admin-section textarea {
+      width: calc(100% - 22px);
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid var(--color-medium-gray);
+      border-radius: 4px;
+      background-color: var(--color-light-gray);
+      color: var(--color-black);
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    .admin-section textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    .admin-section button {
+      background-color: var(--color-yellow);
+      color: var(--color-black);
+      padding: 10px 18px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+      transition: background-color 0.3s;
+    }
+    .admin-section button:hover {
+      background-color: #ffd000;
+    }
+    #password-change-message {
+      margin-top: 15px;
+      font-weight: bold;
+      min-height: 1em;
+    }
+
+    /* Estilo da Ficha de Treino (Preview e Pública) */
+    .training-sheet-display {
+      background-color: rgba(240,240,240,0.95);
+      color: var(--color-black);
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .training-sheet-display h2.student-name-display,
+    #public-student-name {
+      color: var(--color-blue);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .exercise-item {
+      background-color: var(--color-white);
+      border: 1px solid var(--color-medium-gray);
+      border-left: 5px solid var(--color-blue);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .exercise-item h4 {
+      margin: 0 0 5px 0;
+      color: var(--color-black);
+      font-size: 1.2em;
+    }
+    .exercise-item p {
+      margin: 0 0 10px 0;
+      color: var(--color-dark-gray);
+    }
+    .exercise-item a.video-link {
+      display: inline-block;
+      background-color: var(--color-yellow);
+      color: var(--color-black);
+      padding: 8px 12px;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    .exercise-item a.video-link:hover {
+      background-color: #ffd000;
+    }
+
+    /* Edição da Ficha */
+    .editable-sheet .exercise-item {
+      border-left-color: var(--color-yellow);
+    }
+    .editable-sheet input[type="text"],
+    .editable-sheet input[type="url"] {
+      width: calc(100% - 18px);
+      padding: 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--color-medium-gray);
+      border-radius: 3px;
+      box-sizing: border-box;
+    }
+    .editable-sheet .edit-controls button {
+      background-color: var(--color-blue);
+      color: white;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      font-size: 0.9em;
+      padding: 6px 10px;
+    }
+    .editable-sheet .edit-controls button.delete-exercise {
+      background-color: #dc3545;
+    }
+    .editable-sheet .edit-controls button.move-exercise {
+      background-color: var(--color-medium-gray);
+    }
+    .sheet-actions button {
+      margin-right: 10px;
+      margin-bottom: 5px;
+    }
+    .sheet-card {
+      background-color: var(--color-dark-gray);
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--color-yellow);
+    }
+    .sheet-card h3 {
+      margin-top: 0;
+      color: var(--color-yellow);
+    }
+
+    /* Container onde aparecerá o link “clicável” da ficha (Gerar Link) */
+    #share-link-container {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: rgba(255, 222, 0, 0.1);
+      border: 1px solid var(--color-yellow);
+      border-radius: 4px;
+      color: var(--color-white);
+      word-break: break-all; /* Quebra de texto para links longos */
+      display: none;         /* Inicialmente oculto; mostramos apenas quando gerar */
+    }
+    #share-link-container p {
+      margin: 0 0 5px 0;
+    }
+    #share-link-container a {
+      color: var(--color-yellow);
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    /* Container para o link “clicável” de WhatsApp */
+    #whatsapp-link-container {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: rgba(0, 123, 255, 0.1);
+      border: 1px solid var(--color-blue);
+      border-radius: 4px;
+      display: none; /* Oculto até o usuário clicar em “Compartilhar WhatsApp” */
+    }
+    #whatsapp-link-container p {
+      margin: 0 0 5px 0;
+      color: var(--color-white);
+    }
+    #whatsapp-link-container a {
+      background-color: var(--color-blue);
+      color: var(--color-white);
+      padding: 8px 12px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      display: inline-block;
+      word-break: break-all;
+    }
+    #whatsapp-link-container a:hover {
+      background-color: #0056b3;
+    }
+
+    /* Botão Voltar (Visualização Pública) */
+    #sheet-view button#back-to-admin-button {
+      background-color: var(--color-blue);
+      color: var(--color-white);
+      border: none;
+      padding: 10px 18px;
+      margin-top: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: normal;
+    }
+    #sheet-view button#back-to-admin-button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 768px) {
+      #admin-view header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      #admin-view header h1 {
+        margin-bottom: 10px;
+      }
+      #admin-view nav button {
+        margin-left: 0;
+        margin-right: 10px;
+        margin-bottom: 5px;
+      }
+      .login-box {
+        margin: 50px auto;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+
+    <!-- Tela de Login -->
+    <div id="login-view" class="view active-view">
+      <div class="login-box">
+        <h2>Acesso Restrito</h2>
+        <input type="password" id="admin-password-input" placeholder="Senha do Administrador" />
+        <button id="login-button">Entrar</button>
+        <p id="login-error" class="error-message"></p>
+      </div>
+    </div>
+
+    <!-- Painel Admin -->
+    <div id="admin-view" class="view">
+      <header>
+        <h1>Painel do Administrador</h1>
+        <nav>
+          <button id="nav-create-sheet">Cadastrar Nova Ficha</button>
+          <button id="nav-manage-sheets">Gerenciar Fichas</button>
+          <button id="nav-change-password">Alterar Senha</button>
+          <button id="logout-button">Sair</button>
+        </nav>
+      </header>
+      <main id="admin-content">
+        <!-- Cadastrar Nova Ficha -->
+        <section id="create-sheet-section" class="admin-section active-section">
+          <h2>Cadastrar Nova Ficha de Treino</h2>
+          <label for="student-name">Nome do Aluno:</label>
+          <input type="text" id="student-name" placeholder="Ex: João Silva" />
+
+          <label for="training-sheet-input">
+            Cole a ficha abaixo (Exercício 4x12 ou Exercício – 4x12 em uma linha, link do YouTube na linha seguinte opcional):
+          </label>
+          <textarea id="training-sheet-input" rows="15" placeholder="Exemplo:
+Rosca francesa no crossover bilateral 4x12
+https://youtube.com/shorts/r9fR94bp9JQ?feature=share
+Agachamento 3x10
+https://youtu.be/xyz123
+"></textarea>
+
+          <button id="process-sheet-button">Processar e Salvar Ficha</button>
+
+          <div id="sheet-preview-area">
+            <h3>Pré-visualização Formatada:</h3>
+            <div id="formatted-sheet-preview" class="training-sheet-display"></div>
+          </div>
+        </section>
+
+        <!-- Gerenciar Fichas -->
+        <section id="manage-sheets-section" class="admin-section">
+          <h2>Gerenciar Fichas Cadastradas</h2>
+          <div id="existing-sheets-list"></div>
+
+          <!-- Onde aparecerá o link clicável após “Gerar Link” -->
+          <div id="share-link-container"></div>
+
+          <!-- Onde aparecerá o link para WhatsApp após “Compartilhar WhatsApp” -->
+          <div id="whatsapp-link-container"></div>
+        </section>
+
+        <!-- Alterar Senha -->
+        <section id="change-password-section" class="admin-section">
+          <h2>Alterar Senha do Administrador</h2>
+          <input type="password" id="current-password" placeholder="Senha Atual" />
+          <input type="password" id="new-password" placeholder="Nova Senha (mín. 6 caracteres)" />
+          <input type="password" id="confirm-new-password" placeholder="Confirmar Nova Senha" />
+          <button id="submit-change-password">Confirmar Alteração</button>
+          <p id="password-change-message"></p>
+        </section>
+      </main>
+    </div>
+
+    <!-- Visualização Pública da Ficha -->
+    <div id="sheet-view" class="view">
+      <header>
+        <h1>Ficha de Treino</h1>
+      </header>
+      <main>
+        <h2 id="public-student-name"></h2>
+        <div id="public-sheet-display" class="training-sheet-display"></div>
+        <button id="back-to-admin-button" style="display:none;">Voltar ao Painel</button>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // Conteúdo de config.js
+    const APP_CONFIG = {
+      DEFAULT_ADMIN_PASSWORD_HASH: "admin123", // SENHA PADRÃO
+      LOCAL_STORAGE_KEYS: {
+        ADMIN_PASSWORD_HASH: "adminFitnessAppPasswordHash_v1_doc4_fix",
+        TRAINING_SHEETS: "trainingFitnessAppSheets_v1_doc4_fix"
+      },
+      // Substitua pela URL completa (com https://) onde este HTML ficará hospedado.
+      // Exemplo: "https://meusite.com/gestor-fichas.html"
+      HOST_URL: "https://seu-dominio.com/gestor-fichas.html"
+    };
+  </script>
+
+  <script>
+    // Conteúdo de auth.js
+    function getStoredPasswordHash() {
+      return localStorage.getItem(APP_CONFIG.LOCAL_STORAGE_KEYS.ADMIN_PASSWORD_HASH)
+          || APP_CONFIG.DEFAULT_ADMIN_PASSWORD_HASH;
+    }
+
+    function checkPassword(inputPassword) {
+      const stored = getStoredPasswordHash();
+      return inputPassword === stored;
+    }
+
+    function changePassword(currentPassword, newPassword) {
+      if (!checkPassword(currentPassword)) {
+        return { success: false, message: "Senha atual incorreta." };
+      }
+      if (newPassword.length < 6) {
+        return { success: false, message: "Nova senha deve ter pelo menos 6 caracteres." };
+      }
+      localStorage.setItem(APP_CONFIG.LOCAL_STORAGE_KEYS.ADMIN_PASSWORD_HASH, newPassword);
+      return { success: true, message: "Senha alterada com sucesso!" };
+    }
+
+    function login() {
+      const pwd = document.getElementById('admin-password-input').value;
+      const loginError = document.getElementById('login-error');
+      if (checkPassword(pwd)) {
+        sessionStorage.setItem('isAdminLoggedIn', 'true');
+        UI.showView('admin-view');
+        UI.updateAdminNav();
+        loginError.textContent = '';
+        document.getElementById('admin-password-input').value = '';
+      } else {
+        loginError.textContent = 'Senha incorreta.';
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('isAdminLoggedIn');
+      UI.showView('login-view');
+    }
+
+    function isAdminLoggedIn() {
+      return sessionStorage.getItem('isAdminLoggedIn') === 'true';
+    }
+  </script>
+
+  <script>
+    // Conteúdo de ui.js
+    const UI = {
+      showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+        const viewToShow = document.getElementById(viewId);
+        if (!viewToShow) {
+          console.error("UI Error: View não encontrada:", viewId);
+          document.getElementById('login-view').classList.add('active-view');
+          return;
+        }
+        viewToShow.classList.add('active-view');
+
+        // Exibe ou esconde o botão “Voltar ao Painel” na visualização pública
+        const backBtn = document.getElementById('back-to-admin-button');
+        if (backBtn) {
+          backBtn.style.display = (viewId === 'sheet-view' && isAdminLoggedIn()) ? 'inline-block' : 'none';
+        }
+      },
+
+      showAdminSection(sectionId) {
+        document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active-section'));
+        const secToShow = document.getElementById(sectionId);
+        if (!secToShow) {
+          console.error("UI Error: Seção admin não encontrada:", sectionId);
+          document.getElementById('create-sheet-section').classList.add('active-section');
+        } else {
+          secToShow.classList.add('active-section');
+        }
+
+        document.querySelectorAll('#admin-view nav button').forEach(btn => btn.classList.remove('active-nav'));
+        const activeBtn = document.querySelector(`#admin-view nav button[id="nav-${sectionId.replace('-section','')}"]`);
+        if (activeBtn) activeBtn.classList.add('active-nav');
+      },
+
+      updateAdminNav() {
+        this.showAdminSection('create-sheet-section');
+      },
+
+      renderTrainingSheet(sheetData, containerElement, isEditable = false, sheetId = null) {
+        containerElement.innerHTML = '';
+        if (sheetData.studentName) {
+          const h2 = document.createElement('h2');
+          h2.classList.add('student-name-display');
+          h2.textContent = sheetData.studentName;
+          containerElement.appendChild(h2);
+        }
+        sheetData.exercises.forEach((exercise, idx) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.classList.add('exercise-item');
+          itemDiv.dataset.exerciseId = exercise.id;
+
+          if (isEditable) {
+            // Campo de edição para nome, séries/reps e URL
+            const nameLabel = document.createElement('label');
+            nameLabel.textContent = "Exercício:";
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = exercise.name;
+            nameInput.dataset.field = 'name';
+
+            const setsLabel = document.createElement('label');
+            setsLabel.textContent = "Séries/Repetições:";
+            const setsInput = document.createElement('input');
+            setsInput.type = 'text';
+            setsInput.value = exercise.setsReps;
+            setsInput.dataset.field = 'setsReps';
+
+            const urlLabel = document.createElement('label');
+            urlLabel.textContent = "Link do Vídeo (YouTube):";
+            const urlInput = document.createElement('input');
+            urlInput.type = 'url';
+            urlInput.value = exercise.videoUrl;
+            urlInput.dataset.field = 'videoUrl';
+
+            itemDiv.appendChild(nameLabel);
+            itemDiv.appendChild(nameInput);
+            itemDiv.appendChild(setsLabel);
+            itemDiv.appendChild(setsInput);
+            itemDiv.appendChild(urlLabel);
+            itemDiv.appendChild(urlInput);
+
+            // Botões para mover e excluir exercício
+            const controls = document.createElement('div');
+            controls.classList.add('edit-controls');
+
+            const upBtn = document.createElement('button');
+            upBtn.textContent = '↑ Mover Acima';
+            upBtn.classList.add('move-exercise');
+            upBtn.disabled = (idx === 0);
+            upBtn.onclick = () => SheetManager.moveExercise(sheetId, exercise.id, 'up');
+
+            const downBtn = document.createElement('button');
+            downBtn.textContent = '↓ Mover Abaixo';
+            downBtn.classList.add('move-exercise');
+            downBtn.disabled = (idx === sheetData.exercises.length - 1);
+            downBtn.onclick = () => SheetManager.moveExercise(sheetId, exercise.id, 'down');
+
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Excluir Exercício';
+            delBtn.classList.add('delete-exercise');
+            delBtn.onclick = () => SheetManager.deleteExerciseFromSheet(sheetId, exercise.id);
+
+            controls.appendChild(upBtn);
+            controls.appendChild(downBtn);
+            controls.appendChild(delBtn);
+            itemDiv.appendChild(controls);
+
+          } else {
+            // Exibição simples (nome, séries/reps e link se houver)
+            const nameH4 = document.createElement('h4');
+            nameH4.textContent = exercise.name;
+            const setsP = document.createElement('p');
+            setsP.textContent = `Séries e Repetições: ${exercise.setsReps}`;
+            itemDiv.appendChild(nameH4);
+            itemDiv.appendChild(setsP);
+
+            if (exercise.videoUrl) {
+              const link = document.createElement('a');
+              link.href = exercise.videoUrl;
+              link.textContent = '▶️ Ver Vídeo';
+              link.classList.add('video-link');
+              link.target = '_blank';
+              itemDiv.appendChild(link);
+            }
+          }
+
+          containerElement.appendChild(itemDiv);
+        });
+
+        if (isEditable && sheetId) {
+          const saveBtn = document.createElement('button');
+          saveBtn.textContent = 'Salvar Alterações na Ficha';
+          saveBtn.style.marginTop = '20px';
+          saveBtn.style.backgroundColor = 'var(--color-yellow)';
+          saveBtn.style.color = 'var(--color-black)';
+          saveBtn.onclick = () => SheetManager.saveSheetEdits(sheetId);
+          containerElement.appendChild(saveBtn);
+        }
+      },
+
+      displayExistingSheets(sheets) {
+        const list = document.getElementById('existing-sheets-list');
+        list.innerHTML = '';
+        if (sheets.length === 0) {
+          list.innerHTML = '<p>Nenhuma ficha cadastrada ainda.</p>';
+          return;
+        }
+        sheets.forEach(sheet => {
+          const card = document.createElement('div');
+          card.classList.add('sheet-card');
+          card.innerHTML = `
+            <h3>${sheet.studentName || `Ficha ID: ${sheet.id.substring(0,8)}...`}</h3>
+            <p>Exercícios: ${sheet.exercises.length}</p>
+            <div class="sheet-actions">
+              <button data-action="edit" data-id="${sheet.id}">Editar</button>
+              <button data-action="view" data-id="${sheet.id}">Visualizar</button>
+              <button data-action="share-link" data-id="${sheet.id}">Gerar Link</button>
+              <button data-action="share-whatsapp" data-id="${sheet.id}">Compartilhar WhatsApp</button>
+              <button data-action="delete" data-id="${sheet.id}" style="background-color:#dc3545;color:white;">Excluir</button>
+            </div>`;
+          list.appendChild(card);
+        });
+        // Anexa eventos a cada botão do card
+        list.querySelectorAll('.sheet-actions button').forEach(btn => {
+          btn.addEventListener('click', e => {
+            const action = e.target.dataset.action;
+            const id = e.target.dataset.id;
+            SheetManager.handleSheetAction(action, id);
+          });
+        });
+      },
+
+      clearCreateForm() {
+        document.getElementById('student-name').value = '';
+        document.getElementById('training-sheet-input').value = '';
+        const prev = document.getElementById('formatted-sheet-preview');
+        if (prev) prev.innerHTML = '';
+      }
+    };
+  </script>
+
+  <script>
+    // Conteúdo de sheetManager.js
+    const SheetManager = {
+      _generateUniqueId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+      },
+
+      parseTrainingSheetText(text) {
+        console.log("SheetManager: parseTrainingSheetText...");
+        const exercises = [];
+        const lines = text
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => l);
+
+        // Regex para detectar qualquer link do YouTube (youtube.com, m.youtube.com, youtu.be, youtube.com/shorts, etc.)
+        const youtubeRegex = /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\S*$/i;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+
+          // 1a) Se for link do YouTube, associe ao último exercício (se existir)
+          if (youtubeRegex.test(line)) {
+            if (exercises.length > 0 && !exercises[exercises.length - 1].videoUrl) {
+              exercises[exercises.length - 1].videoUrl = line;
+              console.log("Vídeo associado ao exercício anterior:", line);
+            }
+            continue;
+          }
+
+          // 1b) Se não for URL, tente captar "Nome do Exercício - SériesxRepetições" ou "Nome do Exercício 3x12"
+          // O padrão abaixo aceita:
+          // - “Exercício – 4x12”     (hífen ou travessão)
+          // - “Exercício 4x12”       (apenas um espaço antes dos números)
+          const matchEx = line.match(/^(.+?)(?:\s*[-–]\s*|\s+)(\d+\s*[xX]\s*\d+(?:-\d+)?)$/);
+          if (matchEx) {
+            const name = matchEx[1].trim();
+            const setsReps = matchEx[2].trim();
+            exercises.push({
+              id: this._generateUniqueId(),
+              name: name,
+              setsReps: setsReps,
+              videoUrl: ''
+            });
+            console.log(`Exercício detectado: "${name}", Séries/Reps: "${setsReps}"`);
+          } else {
+            console.log(`Linha ignorada (não corresponde a exercício): "${line}"`);
+          }
+        }
+
+        console.log("Exercícios parseados final:", exercises);
+        return exercises;
+      },
+
+      previewSheet() {
+        const raw = document.getElementById('training-sheet-input').value;
+        const student = document.getElementById('student-name').value.trim();
+        const exercises = this.parseTrainingSheetText(raw);
+        const previewContainer = document.getElementById('formatted-sheet-preview');
+        const sheetData = { studentName: student, exercises: exercises };
+        UI.renderTrainingSheet(sheetData, previewContainer, false);
+      },
+
+      saveSheet() {
+        console.log("SheetManager: saveSheet...");
+        const raw = document.getElementById('training-sheet-input').value;
+        const student = document.getElementById('student-name').value.trim();
+        if (!student) {
+          alert("Por favor, informe o nome do aluno.");
+          return;
+        }
+        if (!raw.trim()) {
+          alert("Por favor, cole os dados da ficha de treino.");
+          return;
+        }
+        const exercises = this.parseTrainingSheetText(raw);
+        if (exercises.length === 0) {
+          alert("Não foi possível identificar exercícios. Verifique o formato: 'Exercício – 4x12' ou 'Exercício 4x12'.");
+          return;
+        }
+        const newSheet = {
+          id: this._generateUniqueId(),
+          studentName: student,
+          exercises: exercises,
+          createdAt: new Date().toISOString()
+        };
+        const all = this.getAllSheets();
+        all.push(newSheet);
+        try {
+          localStorage.setItem(APP_CONFIG.LOCAL_STORAGE_KEYS.TRAINING_SHEETS, JSON.stringify(all));
+          alert('Ficha salva com sucesso!');
+          UI.clearCreateForm();
+          UI.showAdminSection('manage-sheets-section');
+          this.loadAndDisplaySheets();
+        } catch (e) {
+          console.error("Erro ao salvar:", e);
+          alert("Ocorreu um erro ao salvar a ficha. Veja o console.");
+        }
+      },
+
+      getAllSheets() {
+        const json = localStorage.getItem(APP_CONFIG.LOCAL_STORAGE_KEYS.TRAINING_SHEETS);
+        return json ? JSON.parse(json) : [];
+      },
+
+      getSheetById(id) {
+        return this.getAllSheets().find(s => s.id === id);
+      },
+
+      loadAndDisplaySheets() {
+        console.log("SheetManager: loadAndDisplaySheets...");
+        const manageSection = document.getElementById('manage-sheets-section');
+        if (manageSection && manageSection.classList.contains('active-section')) {
+          const sheets = this.getAllSheets();
+          UI.displayExistingSheets(sheets);
+
+          // Ao recarregar a lista de fichas, limpe quaisquer links anteriores:
+          document.getElementById('share-link-container').style.display = 'none';
+          document.getElementById('share-link-container').innerHTML = '';
+          document.getElementById('whatsapp-link-container').style.display = 'none';
+          document.getElementById('whatsapp-link-container').innerHTML = '';
+        }
+      },
+
+      deleteSheet(sheetId) {
+        if (!confirm('Tem certeza que deseja excluir esta ficha?')) return;
+        let sheets = this.getAllSheets();
+        sheets = sheets.filter(s => s.id !== sheetId);
+        localStorage.setItem(APP_CONFIG.LOCAL_STORAGE_KEYS.TRAINING_SHEETS, JSON.stringify(sheets));
+        this.loadAndDisplaySheets();
+        alert('Ficha excluída com sucesso.');
+      },
+
+      editSheet(sheetId) {
+        const sheet = this.getSheetById(sheetId);
+        if (!sheet) {
+          alert('Ficha não encontrada!');
+          return;
+        }
+        const container = document.getElementById('existing-sheets-list');
+        container.innerHTML = `<h2 style="color: var(--color-yellow);">Editando Ficha: ${sheet.studentName}</h2>`;
+        container.classList.add('editable-sheet');
+        UI.renderTrainingSheet(sheet, container, true, sheetId);
+      },
+
+      saveSheetEdits(sheetId) {
+        const sheet = this.getSheetById(sheetId);
+        if (!sheet) return;
+        const container = document.getElementById('existing-sheets-list');
+        const updated = [];
+        container.querySelectorAll('.exercise-item').forEach(itemDiv => {
+          const ex = { id: itemDiv.dataset.exerciseId };
+          itemDiv.querySelectorAll('input').forEach(inp => {
+            ex[inp.dataset.field] = inp.value.trim();
+          });
+          updated.push(ex);
+        });
+        sheet.exercises = updated;
+        let all = this.getAllSheets();
+        const idx = all.findIndex(s => s.id === sheetId);
+        if (idx > -1) {
+          all[idx] = sheet;
+          localStorage.setItem(APP_CONFIG.LOCAL_STORAGE_KEYS.TRAINING_SHEETS, JSON.stringify(all));
+          alert('Alterações salvas com sucesso!');
+          container.classList.remove('editable-sheet');
+          this.loadAndDisplaySheets();
+        } else {
+          alert('Erro ao salvar: ficha não encontrada.');
+        }
+      },
+
+      deleteExerciseFromSheet(sheetId, exerciseId) {
+        if (!confirm('Tem certeza que deseja excluir este exercício da ficha?')) return;
+        const container = document.getElementById('existing-sheets-list');
+        const elems = Array.from(container.querySelectorAll('.exercise-item'));
+        const idxElem = elems.findIndex(el => el.dataset.exerciseId === exerciseId);
+        if (idxElem !== -1) {
+          const temp = [];
+          elems.forEach((el, idx) => {
+            if (idx !== idxElem) {
+              const exData = { id: el.dataset.exerciseId };
+              el.querySelectorAll('input').forEach(inp => {
+                exData[inp.dataset.field] = inp.value.trim();
+              });
+              temp.push(exData);
+            }
+          });
+          const sheet = this.getSheetById(sheetId);
+          const tempSheet = { ...sheet, exercises: temp };
+          UI.renderTrainingSheet(tempSheet, container, true, sheetId);
+        }
+      },
+
+      moveExercise(sheetId, exerciseId, direction) {
+        const container = document.getElementById('existing-sheets-list');
+        const elems = Array.from(container.querySelectorAll('.exercise-item'));
+        const idxElem = elems.findIndex(el => el.dataset.exerciseId === exerciseId);
+        if (idxElem === -1) return;
+        const reordered = [];
+        elems.forEach(el => {
+          const exData = { id: el.dataset.exerciseId };
+          el.querySelectorAll('input').forEach(inp => {
+            exData[inp.dataset.field] = inp.value.trim();
+          });
+          reordered.push(exData);
+        });
+        if (direction === 'up' && idxElem > 0) {
+          [reordered[idxElem - 1], reordered[idxElem]] = [reordered[idxElem], reordered[idxElem - 1]];
+        } else if (direction === 'down' && idxElem < reordered.length - 1) {
+          [reordered[idxElem], reordered[idxElem + 1]] = [reordered[idxElem + 1], reordered[idxElem]];
+        }
+        const sheet = this.getSheetById(sheetId);
+        const tempSheet = { ...sheet, exercises: reordered };
+        UI.renderTrainingSheet(tempSheet, container, true, sheetId);
+      },
+
+      generateShareLink(sheetId) {
+        // Usa HOST_URL definido em config.js para montar uma URL HTTPS válida
+        const shareUrl = `${APP_CONFIG.HOST_URL}?sheetId=${sheetId}`;
+
+        const shareContainer = document.getElementById('share-link-container');
+        shareContainer.innerHTML = `
+          <p>Link para compartilhar a ficha:</p>
+          <p>
+            <a href="${shareUrl}" target="_blank">${shareUrl}</a>
+          </p>
+        `;
+        shareContainer.style.display = 'block';
+      },
+
+      shareViaWhatsApp(sheetId) {
+        const sheet = this.getSheetById(sheetId);
+        if (!sheet) return;
+        const shareUrl = `${APP_CONFIG.HOST_URL}?sheetId=${sheetId}`;
+        const message = `Olá! Acesse sua ficha de treino (${sheet.studentName}) aqui: ${shareUrl}`;
+
+        const waContainer = document.getElementById('whatsapp-link-container');
+        waContainer.innerHTML = `
+          <p>Clique abaixo para abrir o WhatsApp com a mensagem pronta:</p>
+          <p>
+            <a href="https://api.whatsapp.com/send?text=${encodeURIComponent(message)}" target="_blank">
+              Abrir WhatsApp para Compartilhar
+            </a>
+          </p>
+        `;
+        waContainer.style.display = 'block';
+      },
+
+      handleSheetAction(action, sheetId) {
+        // Toda vez que clica em qualquer ação de ficha, apagamos links existentes:
+        document.getElementById('share-link-container').style.display = 'none';
+        document.getElementById('share-link-container').innerHTML = '';
+        document.getElementById('whatsapp-link-container').style.display = 'none';
+        document.getElementById('whatsapp-link-container').innerHTML = '';
+
+        switch (action) {
+          case 'edit': this.editSheet(sheetId); break;
+          case 'view': this.displayPublicSheet(sheetId); break;
+          case 'share-link': this.generateShareLink(sheetId); break;
+          case 'share-whatsapp': this.shareViaWhatsApp(sheetId); break;
+          case 'delete': this.deleteSheet(sheetId); break;
+        }
+      },
+
+      displayPublicSheet(sheetId) {
+        const sheet = this.getSheetById(sheetId);
+        const publicContainer = document.getElementById('public-sheet-display');
+        const studentDisplay = document.getElementById('public-student-name');
+        if (sheet) {
+          studentDisplay.textContent = sheet.studentName;
+          UI.renderTrainingSheet(sheet, publicContainer, false);
+        } else {
+          studentDisplay.textContent = 'Ficha Indisponível';
+          publicContainer.innerHTML = '<p>Ficha não encontrada ou link inválido.</p>';
+        }
+        UI.showView('sheet-view');
+      }
+    };
+
+    // Eventos de pré-visualização
+    document.addEventListener('DOMContentLoaded', () => {
+      const rawInput = document.getElementById('training-sheet-input');
+      const nameInput = document.getElementById('student-name');
+      if (rawInput) rawInput.addEventListener('input', () => SheetManager.previewSheet());
+      if (nameInput) nameInput.addEventListener('input', () => SheetManager.previewSheet());
+    });
+  </script>
+
+  <script>
+    // Conteúdo de app.js
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log("app.js: DOMContentLoaded");
+      const loginBtn = document.getElementById('login-button');
+      const logoutBtn = document.getElementById('logout-button');
+      const processBtn = document.getElementById('process-sheet-button');
+      const changePwdBtn = document.getElementById('submit-change-password');
+      const backBtn = document.getElementById('back-to-admin-button');
+
+      function initializeApp() {
+        const params = new URLSearchParams(window.location.search);
+        const sheetId = params.get('sheetId');
+        if (sheetId) {
+          SheetManager.displayPublicSheet(sheetId);
+        } else if (isAdminLoggedIn()) {
+          UI.showView('admin-view');
+          UI.updateAdminNav();
+        } else {
+          UI.showView('login-view');
+        }
+
+        if (isAdminLoggedIn() && document.getElementById('manage-sheets-section').classList.contains('active-section')) {
+          SheetManager.loadAndDisplaySheets();
+        }
+      }
+
+      if (loginBtn) {
+        loginBtn.addEventListener('click', login);
+        document.getElementById('admin-password-input').addEventListener('keypress', e => {
+          if (e.key === 'Enter') login();
+        });
+      }
+      if (logoutBtn) logoutBtn.addEventListener('click', logout);
+      if (processBtn) processBtn.addEventListener('click', () => SheetManager.saveSheet());
+      if (changePwdBtn) {
+        changePwdBtn.addEventListener('click', () => {
+          const current = document.getElementById('current-password').value;
+          const nw = document.getElementById('new-password').value;
+          const conf = document.getElementById('confirm-new-password').value;
+          const msgEl = document.getElementById('password-change-message');
+          if (nw !== conf) {
+            msgEl.textContent = "Nova senha e confirmação não coincidem.";
+            msgEl.style.color = "red";
+            return;
+          }
+          const res = changePassword(current, nw);
+          msgEl.textContent = res.message;
+          msgEl.style.color = res.success ? "var(--color-yellow)" : "red";
+          if (res.success) {
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-new-password').value = '';
+          }
+        });
+      }
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          const url = new URL(window.location);
+          url.searchParams.delete('sheetId');
+          window.history.pushState({}, '', url);
+          UI.showView('admin-view');
+          UI.updateAdminNav();
+        });
+      }
+
+      document.querySelectorAll('#admin-view nav button').forEach(btn => {
+        if (btn.id !== 'logout-button') {
+          btn.addEventListener('click', () => {
+            const targetSection = btn.id.replace('nav-', '') + '-section';
+            UI.showAdminSection(targetSection);
+            if (targetSection === 'manage-sheets-section') {
+              SheetManager.loadAndDisplaySheets();
+            } else if (targetSection === 'create-sheet-section') {
+              UI.clearCreateForm();
+              SheetManager.previewSheet();
+            } else if (targetSection === 'change-password-section') {
+              const msgEl = document.getElementById('password-change-message');
+              if (msgEl) msgEl.textContent = '';
+            }
+          });
+        }
+      });
+
+      initializeApp();
+    });
+  </script>
+</body>
+</html>
